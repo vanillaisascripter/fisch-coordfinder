@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Fisch Coordinate Finder</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    .controls {
+      margin-bottom: 15px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .controls label {
+      font-size: 14px;
+      margin-right: 4px;
+    }
+
+    .controls input {
+      width: 80px;
+      padding: 4px;
+      border-radius: 4px;
+      border: 1px solid #666;
+      background: #222;
+      color: #eee;
+    }
+
+    .controls button {
+      padding: 6px 10px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      background: #1e90ff;
+      color: #fff;
+      font-weight: bold;
+    }
+
+    .controls button:hover {
+      background: #1874d1;
+    }
+
+    .map-wrapper {
+      position: relative;
+      width: 800px;
+      height: 600px;
+      border: 2px solid #444;
+      background: #000;
+      overflow: hidden;
+    }
+
+    .map {
+      width: 100%;
+      height: 100%;
+      background-image: url("https://www.destructoid.com/wp-content/uploads/2025/04/Fisch-Map-All-Islands-NPCs.jpg");
+      background-size: cover;
+      background-position: center;
+    }
+
+    .marker {
+      position: absolute;
+      color: red;
+      font-weight: bold;
+      font-size: 24px;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .info {
+      margin-top: 8px;
+      font-size: 13px;
+      color: #bbb;
+      max-width: 800px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>Fisch Coordinate Finder</h1>
+
+  <div class="controls">
+    <div>
+      <label for="xInput">X:</label>
+      <input type="number" id="xInput" placeholder="X" />
+    </div>
+    <div>
+      <label for="yInput">Y:</label>
+      <input type="number" id="yInput" placeholder="Y" />
+    </div>
+    <div>
+      <label for="zInput">Z:</label>
+      <input type="number" id="zInput" placeholder="Z" />
+    </div>
+    <button id="plotBtn">Plot</button>
+    <button id="clearBtn">Clear</button>
+  </div>
+
+  <div class="map-wrapper" id="mapWrapper">
+    <div class="map"></div>
+    <div id="marker" class="marker" style="display:none;">X</div>
+  </div>
+
+  <div class="info">
+    Enter X, Y, and Z coordinates to see where they appear on the Fisch map.  
+    This map is from Destructoid and shows all islands and NPCs.  
+    The X will appear where your coordinates are on the map.
+  </div>
+
+  <script>
+    // Adjust these values based on the map's coordinate system (from Destructoid guide)
+    const minX = -3000;  // left edge (west)
+    const maxX = 3000;   // right edge (east)
+    const minZ = -3000;  // top edge (north)
+    const maxZ = 3000;   // bottom edge (south)
+
+    const xInput = document.getElementById("xInput");
+    const yInput = document.getElementById("yInput");
+    const zInput = document.getElementById("zInput");
+    const plotBtn = document.getElementById("plotBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const mapWrapper = document.getElementById("mapWrapper");
+    const marker = document.getElementById("marker");
+
+    function clamp(value, min, max) {
+      return Math.min(Math.max(value, min), max);
+    }
+
+    function plotCoordinate() {
+      const x = parseFloat(xInput.value);
+      const y = parseFloat(yInput.value);
+      const z = parseFloat(zInput.value);
+
+      if (isNaN(x) || isNaN(y) || isNaN(z)) {
+        alert("Enter valid numbers for X, Y, and Z.");
+        return;
+      }
+
+      const rect = mapWrapper.getBoundingClientRect();
+      const width = rect.width;
+      const height = rect.height;
+
+      // Normalize X and Z to the map's coordinate bounds
+      const clampedX = clamp(x, minX, maxX);
+      const clampedZ = clamp(z, minZ, maxZ);
+
+      const tX = (clampedX - minX) / (maxX - minX);
+      const tZ = (clampedZ - minZ) / (maxZ - minZ);
+
+      // Convert to pixel coordinates
+      const pixelX = tX * width;
+      const pixelY = tZ * height;
+
+      marker.style.left = pixelX + "px";
+      marker.style.top = pixelY + "px";
+      marker.style.display = "block";
+      marker.title = `X:${x}, Y:${y}, Z:${z}`;
+    }
+
+    function clearMarker() {
+      marker.style.display = "none";
+      marker.title = "";
+    }
+
+    plotBtn.addEventListener("click", plotCoordinate);
+    clearBtn.addEventListener("click", clearMarker);
+  </script>
+</body>
+</html>
