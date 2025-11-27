@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Fisch Coordinate Finder</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    .controls {
+      margin-bottom: 15px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .controls label {
+      font-size: 14px;
+      margin-right: 4px;
+    }
+
+    .controls input {
+      width: 80px;
+      padding: 4px;
+      border-radius: 4px;
+      border: 1px solid #666;
+      background: #222;
+      color: #eee;
+    }
+
+    .controls button {
+      padding: 6px 10px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      background: #1e90ff;
+      color: #fff;
+      font-weight: bold;
+    }
+
+    .controls button:hover {
+      background: #1874d1;
+    }
+
+    .map-wrapper {
+      position: relative;
+      width: 800px;
+      height: 600px;
+      border: 2px solid #444;
+      background: #000;
+      overflow: hidden;
+    }
+
+    .map {
+      width: 100%;
+      height: 100%;
+      background-image: url("https://www.droidgamers.com/wp-content/uploads/2024/11/fisch-map-2-1024x576.jpg");
+      background-size: cover;
+      background-position: center;
+    }
+
+    .marker {
+      position: absolute;
+      color: red;
+      font-weight: bold;
+      font-size: 24px;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .info {
+      margin-top: 8px;
+      font-size: 13px;
+      color: #bbb;
+      max-width: 800px;
+      text-align: center;
+    }
+
+    .details-box {
+      margin-top: 10px;
+      padding: 10px;
+      background: #222;
+      border: 1px solid #444;
+      border-radius: 4px;
+      width: 800px;
+      color: #eee;
+      font-size: 14px;
+    }
+
+    .details-box p {
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Fisch Coordinate Finder</h1>
+
+  <div class="controls">
+    <div>
+      <label for="xInput">X:</label>
+      <input type="number" id="xInput" placeholder="X" />
+    </div>
+    <div>
+      <label for="yInput">Y:</label>
+      <input type="number" id="yInput" placeholder="Y" />
+    </div>
+    <div>
+      <label for="zInput">Z:</label>
+      <input type="number" id="zInput" placeholder="Z" />
+    </div>
+    <button id="plotBtn">Plot</button>
+    <button id="clearBtn">Clear</button>
+  </div>
+
+  <div class="map-wrapper" id="mapWrapper">
+    <div class="map"></div>
+    <div id="marker" class="marker" style="display:none;">X</div>
+  </div>
+
+  <div class="details-box" id="detailsBox">
+    <p><strong>Location:</strong> Enter coordinates to see details.</p>
+    <p><strong>Coordinates:</strong> -</p>
+    <p><strong>Environment:</strong> -</p>
+  </div>
+
+  <div class="info">
+    Enter X, Y, and Z coordinates to see where they appear on the Fisch map.  
+    This map is from Droid Gamers and shows all islands and NPCs.  
+    The X will appear where your coordinates are on the map.
+  </div>
+
+  <script>
+    const minX = -3000;
+    const maxX = 3000;
+    const minZ = -3000;
+    const maxZ = 3000;
+    const waterLevel = 130;
+
+    const sublocations = [
+      { name: "Moosewood Village", xMin: 350, xMax: 450, zMin: 240, zMax: 260 },
+      { name: "Moosewood Dock", xMin: 350, xMax: 370, zMin: 240, zMax: 260 },
+      { name: "Moosewood Lighthouse", xMin: 390, xMax: 410, zMin: 260, zMax: 270 },
+      { name: "Roslit Bay", xMin: -1700, xMax: -1500, zMin: 470, zMax: 530 },
+      { name: "Roslit Volcano", xMin: -1950, xMax: -1850, zMin: 310, zMax: 320 },
+      { name: "Sunstone Island", xMin: -950, xMax: -900, zMin: -1140, zMax: -1080 },
+      { name: "Forsaken Pond", xMin: -2750, xMax: -2650, zMin: 1480, zMax: 1520 },
+      { name: "Upper Forsaken Shores", xMin: -2670, xMax: -2630, zMin: 1430, zMax: 1470 },
+      { name: "Forsaken Shores Dock", xMin: -2780, xMax: -2760, zMin: 1380, zMax: 1420 },
+      { name: "Forsaken Shores Lower Skull", xMin: -2820, xMax: -2780, zMin: 1530, zMax: 1570 },
+      // Add more sublocations as needed
+    ];
+
+    const xInput = document.getElementById("xInput");
+    const yInput = document.getElementById("yInput");
+    const zInput = document.getElementById("zInput");
+    const plotBtn = document.getElementById("plotBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const mapWrapper = document.getElementById("mapWrapper");
+    const marker = document.getElementById("marker");
+    const detailsBox = document.getElementById("detailsBox");
+
+    function clamp(value, min, max) {
+      return Math.min(Math.max(value, min), max);
+    }
+
+    function getSublocation(x, z) {
+      for (const loc of sublocations) {
+        if (x >= loc.xMin && x <= loc.xMax && z >= loc.zMin && z <= loc.zMax) {
+          return loc.name;
+        }
+      }
+      return "Unknown Location";
+    }
+
+    function plotCoordinate() {
+      const x = parseFloat(xInput.value);
+      const y = parseFloat(yInput.value);
+      const z = parseFloat(zInput.value);
+
+      if (isNaN(x) || isNaN(y) || isNaN(z)) {
+        alert("Enter valid numbers for X, Y, and Z.");
+        return;
+      }
+
+      const rect = mapWrapper.getBoundingClientRect();
+      const width = rect.width;
+      const height = rect.height;
+
+      const clampedX = clamp(x, minX, maxX);
+      const clampedZ = clamp(z, minZ, maxZ);
+
+      const tX = (clampedX - minX) / (maxX - minX);
+      const tZ = (clampedZ - minZ) / (maxZ - minZ);
+
+      const pixelX = tX * width;
+      const pixelY = tZ * height;
+
+      marker.style.left = pixelX + "px";
+      marker.style.top = pixelY + "px";
+      marker.style.display = "block";
+      marker.title = `X:${x}, Y:${y}, Z:${z}`;
+
+      // Determine environment
+      const environment = y < waterLevel ? "Underwater" : "Above Water";
+
+      // Find sublocation
+      const sublocation = getSublocation(x, z);
+
+      // Update details box
+      detailsBox.innerHTML = `
+        <p><strong>Location:</strong> ${sublocation}</p>
+        <p><strong>Coordinates:</strong> (${x}, ${y}, ${z})</p>
+        <p><strong>Environment:</strong> ${environment}</p>
+      `;
+    }
+
+    function clearMarker() {
+      marker.style.display = "none";
+      detailsBox.innerHTML = `
+        <p><strong>Location:</strong> Enter coordinates to see details.</p>
+        <p><strong>Coordinates:</strong> -</p>
+        <p><strong>Environment:</strong> -</p>
+      `;
+    }
+
+    document.getElementById("plotBtn").addEventListener("click", plotCoordinate);
+    document.getElementById("clearBtn").addEventListener("click", clearMarker);
+  </script>
+</body>
+</html>
